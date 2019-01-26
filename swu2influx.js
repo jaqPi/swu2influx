@@ -6,7 +6,9 @@ const Influx = require('influx');
 const basePath = 'https://echtzeit.swu.de';
 const api = '/php/phpsqlajax_genxml.php?src=gps';
 
-const influxServerIp = '192.168.10.200';
+const influxServerIp = process.env.INFLUXDB_HOST;
+const username = process.env.INFLUXDB_USER || '';
+const password = process.env.INFLUXDB_PASSWORD || '';
 const dataBaseName = 'position_data';
 const measurement = 'position';
 
@@ -14,6 +16,8 @@ const sleep = time => new Promise(resolve => setTimeout(resolve, time));
 
 const influx = new Influx.InfluxDB({
     host: influxServerIp,
+    username: username,
+    password: password,
     database: dataBaseName,
     schema: [
         {
