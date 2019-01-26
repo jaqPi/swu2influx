@@ -5,6 +5,7 @@ const Influx = require('influx');
 
 const basePath = 'https://echtzeit.swu.de';
 const api = '/php/phpsqlajax_genxml.php?src=gps';
+const sleepTime = 15000;
 
 const influxServerIp = process.env.INFLUXDB_HOST;
 const username = process.env.INFLUXDB_USER || '';
@@ -157,13 +158,17 @@ function convertScheduleStringToSeconds(schedule) {
 }
 
 async function main() {
+    console.log('INFO: Running...');
+
     // check if database exists
     const names = await influx.getDatabaseNames();
     if (!names.includes(dataBaseName)) {
         await influx.createDatabase(dataBaseName);
     }
 
+
     while (true) {
+        console.log('INFO: Job started');
         try {
             const htmlString = await rp(basePath);
             const ids = parseIds(htmlString);
@@ -193,12 +198,12 @@ async function main() {
                     process.exit(1);
                 });
             }));
-
+            console.log(`INFO: Job successful: stored ${markers.length} markers`);
         } catch (e) {
             console.log("ERROR: ", e);
             process.exit(1);
         }
-        await sleep(15000);
+        await sleep(sleepTime);
     }
 }
 
