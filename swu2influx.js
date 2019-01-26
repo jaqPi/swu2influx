@@ -25,7 +25,7 @@ const influx = new Influx.InfluxDB({
             measurement: measurement,
             fields: {
                 vehicle: Influx.FieldType.INTEGER,
-                route: Influx.FieldType.INTEGER,
+                route: Influx.FieldType.STRING,
                 trip: Influx.FieldType.INTEGER,
                 lat: Influx.FieldType.FLOAT,
                 long: Influx.FieldType.FLOAT,
