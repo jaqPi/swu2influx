@@ -34,7 +34,8 @@ const influx = new Influx.InfluxDB({
                 delay: Influx.FieldType.INTEGER,
                 destination: Influx.FieldType.STRING,
                 tripPattern: Influx.FieldType.INTEGER,
-                typ: Influx.FieldType.STRING
+                typ: Influx.FieldType.STRING,
+                serviceType: Influx.FieldType.STRING
             },
             tags: []
         }
@@ -191,7 +192,8 @@ async function main() {
                         delay: convertScheduleStringToSeconds(marker.schedule),
                         destination: marker.ziel,
                         tripPattern: marker.fw,
-                        typ: marker.typ
+                        typ: marker.typ,
+                        serviceType: marker.vt
                     }
                 }]).catch(err => {
                     console.error(`Error saving data to InfluxDB! ${err.stack}`);
