@@ -6,9 +6,6 @@ const Influx = require('influx');
 const basePath = 'https://echtzeit.swu.de';
 const api = '/php/phpsqlajax_genxml.php?src=gps';
 
-const regexRequest = /var request = (\d+);/gm;
-const regexState = /var state = (\d+);/gm;
-
 const influxServerIp = '192.168.10.200';
 const dataBaseName = 'position_data';
 const measurement = 'position';
@@ -48,7 +45,10 @@ const influx = new Influx.InfluxDB({
  * @returns {{requestId: string, stateId: string}}
  */
 function parseIds(htmlString) {
-    console.log(htmlString);
+    const regexRequest = /var request = (\d+);/gm;
+    const regexState = /var state = (\d+);/gm;
+
+
     const requestId = regexRequest.exec(htmlString)[1];
     const stateId = regexState.exec(htmlString)[1];
     return {requestId: requestId, stateId: stateId};
