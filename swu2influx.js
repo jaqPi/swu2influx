@@ -196,6 +196,7 @@ async function main() {
 
         } catch (e) {
             console.log("ERROR: ", e);
+            process.exit(1);
         }
         await sleep(15000);
     }
