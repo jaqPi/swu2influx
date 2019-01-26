@@ -1,0 +1,15 @@
+[Unit]
+Description=swu2influx node
+Requires=influxdb.service
+After=influxdb.service
+
+[Service]
+WorkingDirectory=/home/jakob/swu2influx
+User=jakob
+Environment=INFLUXDB_HOST=localhost
+ExecStart=/usr/bin/node swu2influx.js
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
