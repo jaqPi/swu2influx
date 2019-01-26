@@ -47,7 +47,8 @@ const influx = new Influx.InfluxDB({
  * @param htmlString
  * @returns {{requestId: string, stateId: string}}
  */
-async function parseIds(htmlString) {
+function parseIds(htmlString) {
+    console.log(htmlString);
     const requestId = regexRequest.exec(htmlString)[1];
     const stateId = regexState.exec(htmlString)[1];
     return {requestId: requestId, stateId: stateId};
@@ -60,7 +61,7 @@ async function parseIds(htmlString) {
  * @param requestId
  * @returns {Promise<void>}
  */
-async function callApi(stateId, requestId) {
+function callApi(stateId, requestId) {
     const options = {
         method: 'POST',
         uri: basePath + api,
@@ -72,13 +73,7 @@ async function callApi(stateId, requestId) {
             /* 'content-type': 'application/x-www-form-urlencoded' */ // Is set automatically
         }
     };
-    return new Promise((resolve, reject) => {
-        rp(options)
-            .then((body) => {
-                resolve(body);
-            });
-
-    });
+    return rp(options);
 }
 
 
@@ -88,7 +83,7 @@ async function callApi(stateId, requestId) {
  * @param xmlGlump
  * @returns {string|SVGMarkerElement|string}
  */
-async function parseXml(xmlGlump) {
+function parseXml(xmlGlump) {
     const options = {
         attributeNamePrefix: "",
         //attrNodeName: "attr", //default is 'false'
@@ -125,70 +120,47 @@ function convertScheduleStringToSeconds(schedule) {
 
     const regex = /^(\+|\-)?\s?(\d{2})\:(\d{2})/gm;
 
-    let delayInSeconds = 0 ;
-    if(schedule.startsWith('ab:')) {
+    let delayInSeconds = 0;
+    if (schedule.startsWith('ab:')) {
         return delayInSeconds;
     }
 
     const matches = regex.exec(schedule);
 
     // special case: schedule is 00:00
-    if(matches.length < 3) {
+    if (matches.length < 3) {
         return delayInSeconds;
     }
 
 
-    delayInSeconds += parseInt(matches[3],10);
-    delayInSeconds += parseInt(matches[2],10) * 60;
+    delayInSeconds += parseInt(matches[3], 10);
+    delayInSeconds += parseInt(matches[2], 10) * 60;
 
     // if 'schedule' is a negative number
     if (matches[1] === '-') {
         delayInSeconds *= -1;
     }
-    
+
     return delayInSeconds;
 }
 
 async function main() {
+    const names = await influx.getDatabaseNames();
+    if (!names.includes(dataBaseName)) {
+        await influx.createDatabase(dataBaseName);
+    }
 
-    Promise.all([
-        influx.getDatabaseNames()
-            .then(names => {
-                if (!names.includes(dataBaseName)) {
-                    return influx.createDatabase(dataBaseName)
-                }
-            }),
-        rp(basePath)
-            .then(parseIds)
-            .then(data => callApi(data.stateId, data.requestId))
-            .then(parseXml)
-        //.then((marker) => console.log(marker))
-    ])
-        .then(results => {
-            const markers = results[1];
-            markers.forEach(marker => {
-                influx.writePoints([
-                    {
-                        measurement: measurement,
-                        tags: { },
-                        fields: {
-                            vehicle: marker.fzg,
-                            route: marker.linie,
-                            trip: marker.uml,
-                            lat: marker.lat,
-                            long: marker.lng,
-                            ac: marker.ac === 'J',
-                            wifi: marker.wifi === 'J',
-                            delay: convertScheduleStringToSeconds(marker.schedule),
-                            destination: marker.ziel,
-                            tripPattern: marker.fw,
-                            typ: marker.typ
-                        }
-                    }
-                ]).catch(err => {
-                    console.error(`Error saving data to InfluxDB! ${err.stack}`)
-                });
-                /*console.log({
+    while (true) {
+        try {
+            const htmlString = await rp(basePath);
+            const ids = parseIds(htmlString);
+            const xml = await callApi(ids.stateId, ids.requestId);
+            const markers = parseXml(xml);
+
+            await Promise.all(markers.map(marker => influx.writePoints([{
+                measurement: measurement,
+                tags: {},
+                fields: {
                     vehicle: marker.fzg,
                     route: marker.linie,
                     trip: marker.uml,
@@ -200,16 +172,12 @@ async function main() {
                     destination: marker.ziel,
                     tripPattern: marker.fw,
                     typ: marker.typ
-                });*/
-            });
-        }).catch(error => {
-            console.log(error);
-    });
+                }
+            }]).catch(err => console.error(`Error saving data to InfluxDB! ${err.stack}`))));
 
-
-    console.log("hallo");
-    while(true) {
-
+        } catch (e) {
+            console.log("ERROR: ", e);
+        }
         await sleep(10000);
     }
 }
