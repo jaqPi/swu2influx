@@ -109,6 +109,11 @@ function parseXml(xmlGlump) {
     }
 }
 
+/**
+ * Converts schedule string, e.g., '+ 03:20' to seconds
+ * @param schedule
+ * @returns {number}
+ */
 function convertScheduleStringToSeconds(schedule) {
     /*
     schedule value can be
@@ -119,24 +124,27 @@ function convertScheduleStringToSeconds(schedule) {
      */
 
     const regex = /^(\+|\-)?\s?(\d{2})\:(\d{2})/gm;
-
     let delayInSeconds = 0;
+
+    // case a)
     if (schedule.startsWith('ab:')) {
         return delayInSeconds;
     }
 
     const matches = regex.exec(schedule);
 
-    // special case: schedule is 00:00
+    // case d) special case: schedule is 00:00
     if (matches.length < 3) {
         return delayInSeconds;
     }
 
-
+    // seconds
     delayInSeconds += parseInt(matches[3], 10);
+
+    // minutes * 60 = seconds
     delayInSeconds += parseInt(matches[2], 10) * 60;
 
-    // if 'schedule' is a negative number
+    // case b) and if 'schedule' is a negative number, e.g., - 03:30 case c)
     if (matches[1] === '-') {
         delayInSeconds *= -1;
     }
@@ -145,6 +153,7 @@ function convertScheduleStringToSeconds(schedule) {
 }
 
 async function main() {
+    // check if database exists
     const names = await influx.getDatabaseNames();
     if (!names.includes(dataBaseName)) {
         await influx.createDatabase(dataBaseName);
@@ -157,28 +166,34 @@ async function main() {
             const xml = await callApi(ids.stateId, ids.requestId);
             const markers = parseXml(xml);
 
-            await Promise.all(markers.map(marker => influx.writePoints([{
-                measurement: measurement,
-                tags: {},
-                fields: {
-                    vehicle: marker.fzg,
-                    route: marker.linie,
-                    trip: marker.uml,
-                    lat: marker.lat,
-                    long: marker.lng,
-                    ac: marker.ac === 'J',
-                    wifi: marker.wifi === 'J',
-                    delay: convertScheduleStringToSeconds(marker.schedule),
-                    destination: marker.ziel,
-                    tripPattern: marker.fw,
-                    typ: marker.typ
-                }
-            }]).catch(err => console.error(`Error saving data to InfluxDB! ${err.stack}`))));
+            // Parse all markers and write to influxDb
+            await Promise.all(markers.map(marker => {
+                return influx.writePoints([{
+                    measurement: measurement,
+                    tags: {},
+                    fields: {
+                        vehicle: marker.fzg,
+                        route: marker.linie,
+                        trip: marker.uml,
+                        lat: marker.lat,
+                        long: marker.lng,
+                        ac: marker.ac === 'J',
+                        wifi: marker.wifi === 'J',
+                        delay: convertScheduleStringToSeconds(marker.schedule),
+                        destination: marker.ziel,
+                        tripPattern: marker.fw,
+                        typ: marker.typ
+                    }
+                }]).catch(err => {
+                    console.error(`Error saving data to InfluxDB! ${err.stack}`);
+                    process.exit(1);
+                });
+            }));
 
         } catch (e) {
             console.log("ERROR: ", e);
         }
-        await sleep(10000);
+        await sleep(15000);
     }
 }
 
