@@ -1,0 +1,14 @@
+{
+  "name": "swu2influx",
+  "version": "1.0.0",
+  "main": "swu2influx.js",
+  "license": "MIT",
+  "dependencies" :
+  {
+    "request":"^2.88.0",
+    "request-promise":"^4.2.2",
+    "fast-xml-parser": "^3.12.12",
+    "he": "^1.2.0",
+    "influx": "^5.0.7"
+  }
+}
