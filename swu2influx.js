@@ -123,19 +123,14 @@ function parseXml(xmlGlump) {
 function convertScheduleStringToSeconds(schedule) {
     /*
     schedule value can be
-       a) 'ab: AB:CD' -> trip will start at specific time
-       b) '+ 03:30' -> trip is delayed hh:mm
+       a) 'ab: AB:CD' -> trip will start at specific time // filtered before
+       b) '+ 03:30' -> trip is delayed hh:mm (default case)
        c) '- 03:20' -> trip is early hh:mm
        d) '00:00' -> trip is on time hh:mm
      */
 
     const regex = /^(\+|\-)?\s?(\d{2})\:(\d{2})/gm;
     let delayInSeconds = 0;
-
-    // case a)
-    if (schedule.startsWith('ab:')) {
-        return delayInSeconds;
-    }
 
     const matches = regex.exec(schedule);
 
@@ -150,7 +145,7 @@ function convertScheduleStringToSeconds(schedule) {
     // minutes * 60 = seconds
     delayInSeconds += parseInt(matches[2], 10) * 60;
 
-    // case b) and if 'schedule' is a negative number, e.g., - 03:30 case c)
+    //  if 'schedule' is a negative number, e.g., - 03:30 case c)
     if (matches[1] === '-') {
         delayInSeconds *= -1;
     }
@@ -178,23 +173,29 @@ async function main() {
 
             // Parse all markers and write to influxDb
             await Promise.all(markers.map(marker => {
+                let fields = {
+                    vehicle: marker.fzg,
+                    route: marker.linie,
+                    trip: marker.uml,
+                    lat: marker.lat,
+                    long: marker.lng,
+                    ac: marker.ac === 'J',
+                    wifi: marker.wifi === 'J',
+                    destination: marker.ziel,
+                    tripPattern: marker.fw,
+                    typ: marker.typ,
+                    serviceType: marker.vt
+                };
+
+                // add delay only if bus/tram is on its way
+                if(!marker.schedule.startsWith('ab:')) {
+                    fields.delay = convertScheduleStringToSeconds(marker.schedule);
+                }
+
                 return influx.writePoints([{
                     measurement: measurement,
                     tags: {},
-                    fields: {
-                        vehicle: marker.fzg,
-                        route: marker.linie,
-                        trip: marker.uml,
-                        lat: marker.lat,
-                        long: marker.lng,
-                        ac: marker.ac === 'J',
-                        wifi: marker.wifi === 'J',
-                        delay: convertScheduleStringToSeconds(marker.schedule),
-                        destination: marker.ziel,
-                        tripPattern: marker.fw,
-                        typ: marker.typ,
-                        serviceType: marker.vt
-                    }
+                    fields: fields
                 }]).catch(err => {
                     console.error(`Error saving data to InfluxDB! ${err.stack}`);
                     process.exit(1);
