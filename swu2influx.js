@@ -11,7 +11,7 @@ const influxServerIp = process.env.INFLUXDB_HOST;
 const username = process.env.INFLUXDB_USER || '';
 const password = process.env.INFLUXDB_PASSWORD || '';
 const dataBaseName = 'position_data';
-const measurement = 'position';
+const measurement = 'positionDelay';
 
 const sleep = time => new Promise(resolve => setTimeout(resolve, time));
 
@@ -24,20 +24,21 @@ const influx = new Influx.InfluxDB({
         {
             measurement: measurement,
             fields: {
-                vehicle: Influx.FieldType.INTEGER,
-                route: Influx.FieldType.STRING,
-                trip: Influx.FieldType.INTEGER,
                 lat: Influx.FieldType.FLOAT,
                 long: Influx.FieldType.FLOAT,
-                ac: Influx.FieldType.BOOLEAN,
-                wifi: Influx.FieldType.BOOLEAN,
-                delay: Influx.FieldType.INTEGER,
-                destination: Influx.FieldType.STRING,
-                tripPattern: Influx.FieldType.INTEGER,
-                typ: Influx.FieldType.STRING,
-                serviceType: Influx.FieldType.STRING
+                delay: Influx.FieldType.INTEGER
             },
-            tags: []
+            tags: [
+                'vehicle',
+                'route',
+                'trip',
+                'ac',
+                'wifi',
+                'destination',
+                'tripPattern',
+                'type',
+                'serviceType'
+            ]
         }
     ]
 });
@@ -153,6 +154,22 @@ function convertScheduleStringToSeconds(schedule) {
     return delayInSeconds;
 }
 
+/**
+ * Translates given vehicle type to English. If vehicle type is unknown
+ * it returns untranslated type
+ *
+ * @param type
+ * @returns {*}
+ */
+function translateVehicleType(type) {
+    switch(type) {
+        case 'Strab': return 'tram';
+        case 'Bus': return 'bus';
+        case 'Schienenschleifzug': return 'railgrinder';
+        default: return type;
+    }
+}
+
 async function main() {
     console.log('INFO: Running...');
 
@@ -174,17 +191,8 @@ async function main() {
             // Parse all markers and write to influxDb
             await Promise.all(markers.map(marker => {
                 let fields = {
-                    vehicle: marker.fzg,
-                    route: marker.linie,
-                    trip: marker.uml,
                     lat: marker.lat,
-                    long: marker.lng,
-                    ac: marker.ac === 'J',
-                    wifi: marker.wifi === 'J',
-                    destination: marker.ziel,
-                    tripPattern: marker.fw,
-                    typ: marker.typ,
-                    serviceType: marker.vt
+                    long: marker.lng
                 };
 
                 // add delay only if bus/tram is on its way
@@ -192,9 +200,31 @@ async function main() {
                     fields.delay = convertScheduleStringToSeconds(marker.schedule);
                 }
 
+                let tags = {
+                    vehicle: marker.fzg,
+                    route: marker.linie,
+                    trip: marker.uml,
+                    ac: marker.ac === 'J',
+                    wifi: marker.wifi === 'J',
+                    //,
+                    tripPattern: marker.fw,
+                    type: translateVehicleType(marker.typ)
+                    //serviceType: marker.vt
+                };
+                
+                // Optional tags
+                if (marker.ziel !== '') {
+                    tags.destination = marker.ziel;
+                }
+
+                if (marker.vt !== '') {
+                    tags.serviceType = marker.vt;
+                }
+
+
                 return influx.writePoints([{
                     measurement: measurement,
-                    tags: {},
+                    tags: tags,
                     fields: fields
                 }]).catch(err => {
                     console.error(`Error saving data to InfluxDB! ${err.stack}`);
