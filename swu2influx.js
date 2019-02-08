@@ -196,7 +196,9 @@ async function main() {
                 };
 
                 // add delay only if bus/tram is on its way
-                if(!marker.schedule.startsWith('ab:')) {
+                if(!marker.schedule.startsWith('ab:')
+                    && (marker.schedule.startsWith('+')
+                        || marker.schedule.startsWith('-'))) {
                     fields.delay = convertScheduleStringToSeconds(marker.schedule);
                 }
 
