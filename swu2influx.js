@@ -128,6 +128,7 @@ function convertScheduleStringToSeconds(schedule) {
        b) '+ 03:30' -> trip is delayed hh:mm (default case)
        c) '- 03:20' -> trip is early hh:mm
        d) '00:00' -> trip is on time hh:mm
+       e) 'Oldtimer' -> or any other String...
      */
 
     const regex = /^(\+|\-)?\s?(\d{2})\:(\d{2})/gm;
@@ -135,8 +136,9 @@ function convertScheduleStringToSeconds(schedule) {
 
     const matches = regex.exec(schedule);
 
+    // case e) 'Oldtimer' is always on time because if you are on a ride with an oldtimer time does not matter
     // case d) special case: schedule is 00:00
-    if (matches.length < 3) {
+    if (!matches || matches.length < 3) {
         return delayInSeconds;
     }
 
@@ -212,9 +214,7 @@ async function main() {
                 };
 
                 // add delay only if bus/tram is on its way
-                if(!marker.schedule.startsWith('ab:')
-                    && (marker.schedule.startsWith('+')
-                        || marker.schedule.startsWith('-'))) {
+                if(!marker.schedule.startsWith('ab:')) {
                     fields.delay = convertScheduleStringToSeconds(marker.schedule);
                 }
 
