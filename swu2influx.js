@@ -170,6 +170,22 @@ function translateVehicleType(type) {
     }
 }
 
+/**
+ * Hot fix for 'toto-bug': sometimes, geo location of swu api is shift to africa
+ * @param ordinate
+ */
+function fixLocation(ordinate) {
+    ordinate = parseFloat(ordinate);
+
+    if (!Number.isNaN(ordinate)) {
+        while(Math.round(ordinate) < 8.0) {
+            ordinate *= 10.0;
+        }
+    }
+
+    return ordinate;
+}
+
 async function main() {
     console.log('INFO: Running...');
 
@@ -191,8 +207,8 @@ async function main() {
             // Parse all markers and write to influxDb
             await Promise.all(markers.map(marker => {
                 let fields = {
-                    lat: marker.lat,
-                    long: marker.lng
+                    lat: fixLocation(marker.lat),
+                    long: fixLocation(marker.lng)
                 };
 
                 // add delay only if bus/tram is on its way
