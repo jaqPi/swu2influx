@@ -46,6 +46,11 @@ bcrypt-pbkdf@^1.0.0:
   dependencies:
     tweetnacl "^0.14.3"
 
+bindings@=1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/bindings/-/bindings-1.3.0.tgz#b346f6ecf6a95f5a815c5839fc7cdb22502f1ed7"
+  integrity sha512-DpLh5EzMR2kzvX1KIlVC0VkC3iZtHKTgdtZ0a3pglBZdaQFjt5S9g9xd1lE+YvXyfd6mtCeRnrUfOLYiTMlNSw==
+
 bluebird@^3.5.0:
   version "3.5.3"
   resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-3.5.3.tgz#7d01c6f9616c9a51ab0f8c549a79dfe6ec33efa7"
@@ -335,6 +340,13 @@ safer-buffer@^2.0.2, safer-buffer@^2.1.0, safer-buffer@~2.1.0:
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/safer-buffer/-/safer-buffer-2.1.2.tgz#44fa161b0187b9549dd84bb91802f9bd8385cd6a"
   integrity sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==
+
+sd-notify@^2.5.1:
+  version "2.5.1"
+  resolved "https://registry.yarnpkg.com/sd-notify/-/sd-notify-2.5.1.tgz#e6321028aaa23b1e986b7800da6e896cbbe2e8bc"
+  integrity sha512-0Sn7o88GhYffwlrw0aSI/1kLlrU4aOa8HSXqE0l/jxUCoFQgtKlR2OVQ05+jvmjF0UTeFB2TZzBA3rnHYz+TVQ==
+  dependencies:
+    bindings "=1.3.0"
 
 sshpk@^1.7.0:
   version "1.16.1"

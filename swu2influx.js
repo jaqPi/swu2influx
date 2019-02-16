@@ -2,6 +2,10 @@ const rp = require('request-promise');
 const parser = require('fast-xml-parser');
 const he = require('he');
 const Influx = require('influx');
+var notify;
+try {
+    notify = require('sd-notify')
+} catch(e) {} // ignore
 
 const basePath = 'https://echtzeit.swu.de';
 const api = '/php/phpsqlajax_genxml.php?src=gps';
@@ -204,6 +208,14 @@ async function main() {
         await influx.createDatabase(dataBaseName);
     }
 
+    try {
+        notify.ready();
+        const watchdogInterval = notify.watchdogInterval();
+        if (watchdogInterval > 0) {
+            const interval = Math.floor(watchdogInterval / 2);
+            notify.startWatchdogMode(interval);
+        }
+    } catch(e) {}
 
     while (true) {
         console.info('Job started');

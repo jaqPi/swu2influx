@@ -10,5 +10,8 @@
     "fast-xml-parser": "^3.12.12",
     "he": "^1.2.0",
     "influx": "^5.0.7"
+  },
+  "optionalDependencies": {
+    "sd-notify": "^2.5.1"
   }
 }
