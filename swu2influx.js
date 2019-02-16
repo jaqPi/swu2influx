@@ -189,17 +189,24 @@ function fixLocation(ordinate) {
 }
 
 async function main() {
-    console.log('INFO: Running...');
+    console.info('Running...');
 
     // check if database exists
-    const names = await influx.getDatabaseNames();
+    let names;
+    try {
+        names = await influx.getDatabaseNames();
+    }
+    catch (e) {
+        console.error(e);
+        process.exit(1);
+    }
     if (!names.includes(dataBaseName)) {
         await influx.createDatabase(dataBaseName);
     }
 
 
     while (true) {
-        console.log('INFO: Job started');
+        console.info('Job started');
         try {
             const htmlString = await rp(basePath);
             const ids = parseIds(htmlString);
@@ -249,9 +256,9 @@ async function main() {
                     process.exit(1);
                 });
             }));
-            console.log(`INFO: Job successful: stored ${markers.length} markers`);
+            console.info(`Job successful: stored ${markers.length} markers`);
         } catch (e) {
-            console.log("ERROR: ", e);
+            console.error(e);
             process.exit(1);
         }
         await sleep(sleepTime);
