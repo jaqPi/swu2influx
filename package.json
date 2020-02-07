@@ -6,12 +6,11 @@
   "dependencies" :
   {
     "request":"^2.88.0",
-    "request-promise":"^4.2.2",
-    "fast-xml-parser": "^3.12.12",
+    "request-promise":"^4.2.5",
     "he": "^1.2.0",
-    "influx": "^5.0.7"
+    "influx": "^5.5.1"
   },
   "optionalDependencies": {
-    "sd-notify": "^2.5.1"
+    "sd-notify": "^2.7.2"
   }
 }
