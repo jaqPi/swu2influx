@@ -1,5 +1,4 @@
 const rp = require('request-promise');
-const parser = require('fast-xml-parser');
 const he = require('he');
 const Influx = require('influx');
 var notify;
@@ -8,14 +7,14 @@ try {
 } catch(e) {} // ignore
 
 const basePath = 'https://echtzeit.swu.de';
-const api = '/php/phpsqlajax_genxml.php?src=gps';
+const api = '/json/echtzjs.php?&src=gps';
 const sleepTime = 15000;
 
 const influxServerIp = process.env.INFLUXDB_HOST;
 const username = process.env.INFLUXDB_USER || '';
 const password = process.env.INFLUXDB_PASSWORD || '';
 const dataBaseName = 'position_data';
-const measurement = 'positionDelay';
+const measurement = 'positionDelayV2';
 
 const sleep = time => new Promise(resolve => setTimeout(resolve, time));
 
@@ -39,9 +38,9 @@ const influx = new Influx.InfluxDB({
                 'ac',
                 'wifi',
                 'destination',
-                'tripPattern',
                 'type',
-                'serviceType'
+                'headsign',
+                'activ'
             ]
         }
     ]
@@ -85,39 +84,6 @@ function callApi(stateId, requestId) {
         }
     };
     return rp(options);
-}
-
-
-/**
- * Parses api response to array of json objects
- *
- * @param xmlGlump
- * @returns {string|SVGMarkerElement|string}
- */
-function parseXml(xmlGlump) {
-    const options = {
-        attributeNamePrefix: "",
-        //attrNodeName: "attr", //default is 'false'
-        textNodeName: "#text",
-        ignoreAttributes: false,
-        ignoreNameSpace: false,
-        allowBooleanAttributes: false,
-        parseNodeValue: true,
-        parseAttributeValue: true,
-        trimValues: true,
-        //cdataTagName: "__cdata", //default is 'false'
-        //cdataPositionChar: "\\c",
-        //localeRange: "", //To support non english character in tag/attribute values.
-        parseTrueNumberOnly: false,
-        attrValueProcessor: a => he.decode(a, {isAttributeValue: true}),//default is a=>a
-        tagValueProcessor: a => he.decode(a) //default is a=>a
-    };
-
-    if (parser.validate(xmlGlump) === true) { //optional (it'll return an object in case it's not valid)
-        const jsonObj = parser.parse(xmlGlump, options);
-        //console.log(jsonObj.markers.marker);
-        return jsonObj.markers.marker;
-    }
 }
 
 /**
@@ -222,8 +188,9 @@ async function main() {
         try {
             const htmlString = await rp(basePath);
             const ids = parseIds(htmlString);
-            const xml = await callApi(ids.stateId, ids.requestId);
-            const markers = parseXml(xml);
+            const rawJson = await callApi(ids.stateId, ids.requestId);
+            //const markers = parseXml(xml);
+            const markers  = JSON.parse(rawJson);
 
             // Parse all markers and write to influxDb
             await Promise.all(markers.map(marker => {
@@ -233,31 +200,33 @@ async function main() {
                 };
 
                 // add delay only if bus/tram is on its way
-                if(!marker.schedule.startsWith('ab:')) {
-                    fields.delay = convertScheduleStringToSeconds(marker.schedule);
+                if(!marker.Abweichung.startsWith('ab:')) {
+                    fields.delay = convertScheduleStringToSeconds(marker.Abweichung);
                 }
 
                 let tags = {
-                    vehicle: marker.fzg,
-                    route: marker.linie,
-                    trip: marker.uml,
-                    ac: marker.ac === 'J',
-                    wifi: marker.wifi === 'J',
-                    //,
-                    tripPattern: marker.fw,
-                    type: translateVehicleType(marker.typ)
-                    //serviceType: marker.vt
+                    wifi: marker.Wifi === 'true',
+                    type: translateVehicleType(marker.Typ),
+                    active: marker.aktiv === 'true'
                 };
-                
+
+                if(!isNaN(parseInt(marker.Fzg))) {
+                    tags.vehicle = parseInt(marker.Fzg);
+                }
+
+                if(!isNaN(parseInt(marker.Linie))) {
+                    tags.route = parseInt(marker.Linie);
+                }
+
+                if(!isNaN(parseInt(marker.TripID))) {
+                    tags.trip = parseInt(marker.TripID);
+                }
+
+
                 // Optional tags
-                if (marker.ziel !== '') {
-                    tags.destination = marker.ziel;
+                if (marker.Zielschild !== '') {
+                    tags.headsign = marker.Zielschild;
                 }
-
-                if (marker.vt !== '') {
-                    tags.serviceType = marker.vt;
-                }
-
 
                 return influx.writePoints([{
                     measurement: measurement,
